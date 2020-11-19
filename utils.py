@@ -1,3 +1,4 @@
+import base64
 import os
 import cv2.cv2 as cv
 import numpy as np
@@ -120,3 +121,18 @@ def show(img):
         with open(img, "rb") as f:
             img = IPyImage(f.read())
     display(img)
+
+
+def get_image_data_url(img, ext=".png"):
+    if ext == ".png":
+        mime = "png"
+    else:
+        mime = "jpg"
+    image = cv.imencode(ext, img)[1].tobytes()
+    data = base64.b64encode(image).decode("ascii")
+    return "data:img/{}; base64,{}".format(mime, data)
+
+
+def pixel2str(pixel):
+    b, g, r = pixel
+    return "rgb({}, {}, {})".format(r, g, b)

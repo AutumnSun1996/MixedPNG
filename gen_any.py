@@ -14,8 +14,8 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=1):
     diff_bg_2 = img_dot(diff_bg, diff_bg)
 
     # 根据背景进行颜色调制
-    img1 = bg2 + (1 - img1) * diff_bg
-    img2 = bg1 - img2 * diff_bg
+    img1 = bg2 + img1 * diff_bg
+    img2 = bg1 - (1 - img2) * diff_bg
 
     # 计算目标颜色差异
     diff_img = img1 - img2
@@ -115,22 +115,59 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=1):
     return mixed_image * 255
 
 
+def norm_img(img):
+    return np.array(img).astype("float") / 255
+
+
+def generate_html(img1, img2, bg1, bg2, adjust_ratio=0):
+    from utils import get_image_data_url
+    import json
+
+    bg_template = np.ones_like(img1).astype("float")
+    res = get_mixed(
+        norm_img(img1),
+        norm_img(img2),
+        norm_img(bg1) * bg_template,
+        norm_img(bg2) * bg_template,
+        adjust_ratio,
+    )
+    cv.imwrite("output/result.png", res)
+
+    item = {
+        "targets": [
+            {"data": get_image_data_url(img1, ".jpg")},
+            {"data": get_image_data_url(img2, ".jpg")},
+        ],
+        "backgrounds": [
+            {"data": pixel2str(bg1)},
+            {"data": pixel2str(bg2)},
+        ],
+        "result": {"data": "../output/result.png"},
+    }
+    with open("template/all.html", "r", -1, "UTF8") as f:
+        template = f.read()
+    result = template.replace("__JSON_DATA__", json.dumps(item))
+    with open("output/all.html", "w", -1, "UTF8") as f:
+        f.write(result)
+
+
 def main(path):
-    img_white = 255 - bgra2bgr(cv.imread(path["white"], cv.IMREAD_UNCHANGED))
-    img_black = 255 - bgra2bgr(cv.imread(path["black"], cv.IMREAD_UNCHANGED))
-    dt = np.array((175, 199, 42)) / 255
+    img_white = bgra2bgr(cv.imread(path["white"], cv.IMREAD_UNCHANGED))
+    img_black = bgra2bgr(cv.imread(path["black"], cv.IMREAD_UNCHANGED))
     cropw, cropb = align(img_white, img_black)
-    cropw = cropw.astype("float") / 255
-    cropb = cropb.astype("float") / 255
+    # generate_html(cropw, cropb, (255, 255, 255), (175, 199, 42))
+    # generate_html(cropw, cropb, (255, 255, 255), (0, 0, 0), 1)
+    generate_html(cropb, cropw, (0, 0, 0), (255, 255, 255), 1)
 
-    back1 = np.zeros_like(cropw) + 1
-    back2 = np.zeros_like(cropw) + dt
+    # cropw = cropw.astype("float") / 255
+    # cropb = cropb.astype("float") / 255
 
-    res = get_mixed(cropw, cropb, back1, back2)
-    cv.imwrite("best1.png", res)
+    # back1 = np.zeros_like(cropw) + 1
+    # back2 = np.zeros_like(cropw) + dt
 
+    # res = get_mixed(cropw, cropb, back1, back2)
+    # cv.imwrite("output/result.png", res)
 
-def generate_html()
 
 if __name__ == "__main__":
     path = {

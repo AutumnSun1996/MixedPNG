@@ -1,0 +1,33 @@
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<div id="main"></div>
+<style>
+    body,
+    html {
+        margin: 0px;
+        text-align: center;
+    }
+    img {
+        width: 40%;
+        border: 10px;
+        margin: 10px;
+    }
+</style>
+<script>
+    var DATA = __JSON_DATA__;
+    const main = document.getElementById("main");
+    main.innerHTML += `图片地址: <a href="${DATA.result.data}">${DATA.result.data}</a>`;
+    main.innerHTML += `<br/>原图<br/>`;
+    for (let item of DATA.targets) {
+        main.innerHTML += `<img src="${item.data}"/>`;
+    }
+    main.innerHTML += `<br/>实际效果<br/>`;
+    for (let item of DATA.backgrounds) {
+        main.innerHTML += `<img src="${DATA.result.data}" style="background: ${item.data}"/>`;
+    }
+    main.innerHTML += `<br/>背景<br/>`;
+    for (let item of DATA.backgrounds) {
+        main.innerHTML += `<div style="display: inline-block; width: 40%; height: 400px; background: ${item.data}">
+            <span style="background: white; color: black;">${item.data}</span>
+            </div>`;
+    }
+</script>
