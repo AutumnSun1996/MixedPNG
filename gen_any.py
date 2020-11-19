@@ -8,14 +8,27 @@ def rescale(img, factor):
     return factor[0] + img * factor[1]
 
 
-def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=1):
+def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
     # 计算背景颜色差异
     diff_bg = bg1 - bg2
     diff_bg_2 = img_dot(diff_bg, diff_bg)
 
     # 根据背景进行颜色调制
-    img1 = bg2 + img1 * diff_bg
-    img2 = bg1 - (1 - img2) * diff_bg
+    if diff_bg.mean() > 0:
+        print("背景颜色调制 1")
+        img1 = img1 * diff_bg + bg2
+        img2 = (img2 - 1) * diff_bg + bg1
+        defaut_adjust = 1
+    else:
+        print("背景颜色调制 -1")
+        img1 = bg2 + (1 - img1) * diff_bg
+        img2 = bg1 - img2 * diff_bg
+        defaut_adjust = 0
+    
+    ced = [img1.copy() * 255, img2.copy() * 255]
+
+    if adjust_ratio is None:
+        adjust_ratio = defaut_adjust
 
     # 计算目标颜色差异
     diff_img = img1 - img2
@@ -112,61 +125,56 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=1):
     mixed_image = np.concatenate((result_bgr, alpha), -1)
     showinfo("mixed_image", mixed_image)
     # TODO: 是否需要 * 255? 是否需要转换为 uint8?
-    return mixed_image * 255
+    return mixed_image * 255, ced
 
 
 def norm_img(img):
     return np.array(img).astype("float") / 255
 
 
-def generate_html(img1, img2, bg1, bg2, adjust_ratio=0):
+def generate_html(img1, img2, bg1, bg2, name="all"):
     from utils import get_image_data_url
     import json
 
     bg_template = np.ones_like(img1).astype("float")
-    res = get_mixed(
+    res, (ced1, ced2) = get_mixed(
         norm_img(img1),
         norm_img(img2),
         norm_img(bg1) * bg_template,
         norm_img(bg2) * bg_template,
-        adjust_ratio,
     )
-    cv.imwrite("output/result.png", res)
+    cv.imwrite("output/%s.png" % name, res)
 
     item = {
         "targets": [
             {"data": get_image_data_url(img1, ".jpg")},
             {"data": get_image_data_url(img2, ".jpg")},
+            {"data": get_image_data_url(ced1, ".jpg")},
+            {"data": get_image_data_url(ced2, ".jpg")},
         ],
         "backgrounds": [
             {"data": pixel2str(bg1)},
             {"data": pixel2str(bg2)},
         ],
-        "result": {"data": "../output/result.png"},
+        "result": {"data": "../output/%s.png" % name},
     }
     with open("template/all.html", "r", -1, "UTF8") as f:
         template = f.read()
     result = template.replace("__JSON_DATA__", json.dumps(item))
-    with open("output/all.html", "w", -1, "UTF8") as f:
+    with open("output/%s.html" % name, "w", -1, "UTF8") as f:
         f.write(result)
 
 
 def main(path):
     img_white = bgra2bgr(cv.imread(path["white"], cv.IMREAD_UNCHANGED))
     img_black = bgra2bgr(cv.imread(path["black"], cv.IMREAD_UNCHANGED))
-    cropw, cropb = align(img_white, img_black)
+    img1, img2 = align(img_white, img_black)
     # generate_html(cropw, cropb, (255, 255, 255), (175, 199, 42))
     # generate_html(cropw, cropb, (255, 255, 255), (0, 0, 0), 1)
-    generate_html(cropb, cropw, (0, 0, 0), (255, 255, 255), 1)
-
-    # cropw = cropw.astype("float") / 255
-    # cropb = cropb.astype("float") / 255
-
-    # back1 = np.zeros_like(cropw) + 1
-    # back2 = np.zeros_like(cropw) + dt
-
-    # res = get_mixed(cropw, cropb, back1, back2)
-    # cv.imwrite("output/result.png", res)
+    bg1 = (255, 255, 255)
+    bg2 = (175, 199, 42)
+    # generate_html(img1, img2, bg1, bg2)
+    generate_html(img1, img2, bg1, bg2, name="all")
 
 
 if __name__ == "__main__":
