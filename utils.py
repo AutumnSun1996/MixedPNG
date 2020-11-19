@@ -102,7 +102,7 @@ def showinfo(*args, **kwargs):
     pargs = []
     for arg in args:
         if isinstance(arg, np.ndarray):
-            arg = "<{}{}: {:.1f} | {:.1f} | {:.1f}>".format(
+            arg = "<{}{}: {:.3f} | {:.3f} | {:.3f}>".format(
                 arg.shape, arg.dtype, arg.min(), arg.mean(), arg.max()
             )
         pargs.append(arg)
