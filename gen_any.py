@@ -1,7 +1,7 @@
 import cv2.cv2 as cv
 import numpy as np
 
-from utils import *
+from utils import showinfo, img_dot, div_no_zero, trim_matrix, pixel2str, align, bgra2bgr
 
 
 def rescale(img, factor):
@@ -9,6 +9,7 @@ def rescale(img, factor):
 
 
 def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
+    showinfo("get_mixed", img1, img2, bg1, bg2)
     # 计算背景颜色差异
     diff_bg = bg1 - bg2
     diff_bg_2 = img_dot(diff_bg, diff_bg)
@@ -84,7 +85,7 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
         # 计算变换参数 a1 的取值范围
         max_a1 = min(1 - diff_b * img1.max(), 1 + diff_a - diff_b * img2.max())
         min_a1 = max(diff_a - diff_b * img2.min(), -diff_b * img1.min())
-        print("adjust limit", min_a1, max_a1)
+        print("adjust limit:", min_a1, max_a1, "ratio:", adjust_ratio)
 
         # 得到图像1和2的变换参数
         factor1 = min_a1 + adjust_ratio * (max_a1 - min_a1), diff_b
@@ -132,7 +133,7 @@ def norm_img(img):
     return np.array(img).astype("float") / 255
 
 
-def generate_html(img1, img2, bg1, bg2, name="all"):
+def generate_html(img1, img2, bg1, bg2, name="all", adjust_ratio=None):
     from utils import get_image_data_url
     import json
 
@@ -142,6 +143,7 @@ def generate_html(img1, img2, bg1, bg2, name="all"):
         norm_img(img2),
         norm_img(bg1) * bg_template,
         norm_img(bg2) * bg_template,
+        adjust_ratio,
     )
     cv.imwrite("output/%s.png" % name, res)
 
@@ -172,19 +174,26 @@ def main(path):
     # generate_html(cropw, cropb, (255, 255, 255), (175, 199, 42))
     # generate_html(cropw, cropb, (255, 255, 255), (0, 0, 0), 1)
     bg1 = (255, 255, 255)
-    bg2 = (175, 199, 42)
-    # generate_html(img1, img2, bg1, bg2)
-    generate_html(img1, img2, bg1, bg2, name="all")
+    bg2 = (0, 0, 0)
+    img2 = 255 - img2
+    generate_html(img1, img2, bg1, bg2, name="icon-FFF-000")
+    generate_html(img2, img1, bg2, bg1, name="icon-000-FFF")
+    
+    # bg1 = (255, 255, 255)
+    # bg2 = (175, 199, 42)
+    # img2 = 255 - img2
+    # generate_html(img1, img2, bg1, bg2, name="icon-FFF-2AC7AF")
+    # generate_html(img2, img1, bg2, bg1, name="icon-2AC7AF-FFF")
 
 
 if __name__ == "__main__":
-    path = {
-        "white": R"D:\Pictures\Wallpapers\735962.png",
-        "black": R"D:\Pictures\Wallpapers\1500371699026.jpg",
-    }
     # path = {
-    #     "black": R"D:\Pictures\Saved Pictures\Icon_LotusClean_Black.jpg",
-    #     "white": R"D:\Pictures\Saved Pictures\SentientFactionIcon_b.png",
+    #     "white": R"D:\Pictures\Wallpapers\735962.png",
+    #     "black": R"D:\Pictures\Wallpapers\1500371699026.jpg",
     # }
+    path = {
+        "black": R"D:\Pictures\Saved Pictures\Icon_LotusClean_Black.jpg",
+        "white": R"D:\Pictures\Saved Pictures\SentientFactionIcon_b.png",
+    }
 
     main(path)
