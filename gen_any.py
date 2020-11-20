@@ -9,25 +9,39 @@ def rescale(img, factor):
 
 
 def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
+    """生成幻影图片
+
+    :param img1: 目标图片1, 在背景1下展示
+    :param img2: 目标图片2, 在背景2下展示
+    :param bg1: 背景1, 默认为全白色
+    :param bg2: 背景2, 默认为全黑色
+    :param adjust_ratio: float, 0到1之间, 默认根据背景确定为0或1
+
+    所有图像(包括背景)均应满足:
+        shape为(h,w,3)或(w,h,3)
+        float格式
+        [0, 1]区间
+    """
     showinfo("get_mixed", img1, img2, bg1, bg2)
     # 计算背景颜色差异
     diff_bg = bg1 - bg2
     diff_bg_2 = img_dot(diff_bg, diff_bg)
 
     # 根据背景进行颜色调制
+    # ==色相调制==
     if diff_bg.mean() > 0:
         print("背景颜色调制 1")
         img1 = img1 * diff_bg + bg2
-        img2 = (img2 - 1) * diff_bg + bg1
+        img2 = img2 * diff_bg + bg2
         defaut_adjust = 1
     else:
         print("背景颜色调制 -1")
-        img1 = bg2 + (1 - img1) * diff_bg
+        img1 = bg1 - img1 * diff_bg
         img2 = bg1 - img2 * diff_bg
         defaut_adjust = 0
-    
     ced = [img1.copy() * 255, img2.copy() * 255]
 
+    # ==亮度差调制==
     if adjust_ratio is None:
         adjust_ratio = defaut_adjust
 
@@ -119,6 +133,7 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
     showinfo("result_bgr", result_bgr)
     # 保证bgr通道取值为0到1之间，溢出部分直接舍去
     # TODO: 是否可以避免溢出? 是否有更好的溢出处理方案?
+    # TODO: 饱和度调制?
     result_bgr = trim_matrix(result_bgr, 0, 1, 0, 1)
     showinfo("result_bgr", result_bgr)
 
@@ -175,10 +190,15 @@ def main(path):
     # generate_html(cropw, cropb, (255, 255, 255), (0, 0, 0), 1)
     bg1 = (255, 255, 255)
     bg2 = (0, 0, 0)
-    img2 = 255 - img2
-    generate_html(img1, img2, bg1, bg2, name="icon-FFF-000")
-    generate_html(img2, img1, bg2, bg1, name="icon-000-FFF")
-    
+    generate_html(img1, img2, bg1, bg2, name="dal-FFF-000")
+    generate_html(img2, img1, bg2, bg1, name="dal-000-FFF")
+
+    # bg1 = (255, 255, 255)
+    # bg2 = (0, 0, 0)
+    # img2 = 255 - img2
+    # generate_html(img1, img2, bg1, bg2, name="icon-FFF-000")
+    # generate_html(img2, img1, bg2, bg1, name="icon-000-FFF")
+
     # bg1 = (255, 255, 255)
     # bg2 = (175, 199, 42)
     # img2 = 255 - img2
@@ -187,13 +207,13 @@ def main(path):
 
 
 if __name__ == "__main__":
-    # path = {
-    #     "white": R"D:\Pictures\Wallpapers\735962.png",
-    #     "black": R"D:\Pictures\Wallpapers\1500371699026.jpg",
-    # }
     path = {
-        "black": R"D:\Pictures\Saved Pictures\Icon_LotusClean_Black.jpg",
-        "white": R"D:\Pictures\Saved Pictures\SentientFactionIcon_b.png",
+        "white": R"D:\Pictures\Wallpapers\735962.png",
+        "black": R"D:\Pictures\Wallpapers\1500371699026.jpg",
     }
+    # path = {
+    #     "black": R"D:\Pictures\Saved Pictures\Icon_LotusClean_Black.jpg",
+    #     "white": R"D:\Pictures\Saved Pictures\SentientFactionIcon_b.png",
+    # }
 
     main(path)
