@@ -181,39 +181,3 @@ def generate_html(img1, img2, bg1, bg2, name="all", adjust_ratio=None):
     with open("output/%s.html" % name, "w", -1, "UTF8") as f:
         f.write(result)
 
-
-def main(path):
-    img_white = bgra2bgr(cv.imread(path["white"], cv.IMREAD_UNCHANGED))
-    img_black = bgra2bgr(cv.imread(path["black"], cv.IMREAD_UNCHANGED))
-    img1, img2 = align(img_white, img_black)
-    # generate_html(cropw, cropb, (255, 255, 255), (175, 199, 42))
-    # generate_html(cropw, cropb, (255, 255, 255), (0, 0, 0), 1)
-    bg1 = (255, 255, 255)
-    bg2 = (0, 0, 0)
-    generate_html(img1, img2, bg1, bg2, name="dal-FFF-000")
-    generate_html(img2, img1, bg2, bg1, name="dal-000-FFF")
-
-    # bg1 = (255, 255, 255)
-    # bg2 = (0, 0, 0)
-    # img2 = 255 - img2
-    # generate_html(img1, img2, bg1, bg2, name="icon-FFF-000")
-    # generate_html(img2, img1, bg2, bg1, name="icon-000-FFF")
-
-    # bg1 = (255, 255, 255)
-    # bg2 = (175, 199, 42)
-    # img2 = 255 - img2
-    # generate_html(img1, img2, bg1, bg2, name="icon-FFF-2AC7AF")
-    # generate_html(img2, img1, bg2, bg1, name="icon-2AC7AF-FFF")
-
-
-if __name__ == "__main__":
-    path = {
-        "white": R"D:\Pictures\Wallpapers\735962.png",
-        "black": R"D:\Pictures\Wallpapers\1500371699026.jpg",
-    }
-    # path = {
-    #     "black": R"D:\Pictures\Saved Pictures\Icon_LotusClean_Black.jpg",
-    #     "white": R"D:\Pictures\Saved Pictures\SentientFactionIcon_b.png",
-    # }
-
-    main(path)
