@@ -158,6 +158,8 @@ COLOR_NAME_MAP = {
 
 
 def bgra2bgr(img, background=255):
+    """模拟background颜色的背景, 将bgra格式的图片转换为bgr格式
+    """
     if img.shape[2] < 4:
         return img
     img = img.astype("float32")
@@ -168,6 +170,8 @@ def bgra2bgr(img, background=255):
 
 
 def div_no_zero(a, b, out=None):
+    """进行矩阵除法, 但当b为0时将结果置为0
+    """
     if out is None:
         # 当b为0时，默认输出0
         out = np.zeros_like(a)
@@ -175,6 +179,8 @@ def div_no_zero(a, b, out=None):
 
 
 def img_dot(a, b):
+    """对图片上的像素点进行点积
+    """
     return np.einsum("hwd,hwd->hw", a, b)
 
 
@@ -251,8 +257,11 @@ def trim_matrix(mat, low, high, trim_low=None, trim_high=None):
 
 
 def showinfo(*args, **kwargs):
+    """模拟print, 但对numpy矩阵只输出元信息而不输出内容
+    """
     pargs = []
     for arg in args:
+        # 处理numpy矩阵
         if isinstance(arg, np.ndarray):
             arg = "<{}{}: {:.3f} | {:.3f} | {:.3f}>".format(
                 arg.shape, arg.dtype, arg.min(), arg.mean(), arg.max()
@@ -262,6 +271,8 @@ def showinfo(*args, **kwargs):
 
 
 def show(img):
+    """展示图片
+    """
     if isinstance(img, bytes):
         img = IPyImage(img)
     elif isinstance(img, np.ndarray):
@@ -276,6 +287,8 @@ def show(img):
 
 
 def get_image_data_url(img, ext=".png"):
+    """将numpy矩阵格式的图片转换为data url字符串
+    """
     if ext == ".png":
         mime = "png"
     else:
@@ -286,11 +299,15 @@ def get_image_data_url(img, ext=".png"):
 
 
 def pixel2str(pixel):
+    """将像素值转换为css的rgb()字符串格式
+    """
     b, g, r = pixel
     return "rgb({}, {}, {})".format(r, g, b)
 
 
 def load_color(text):
+    """将颜色字符串转化为(b,g,r)值
+    """
     text = text.lower()
     if text in COLOR_NAME_MAP:
         text = COLOR_NAME_MAP[text]
