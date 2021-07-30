@@ -1,14 +1,20 @@
 import cv2.cv2 as cv
 import numpy as np
 
-from utils import showinfo, img_dot, div_no_zero, trim_matrix, pixel2str, align, bgra2bgr
+from utils import (
+    showinfo,
+    img_dot,
+    div_no_zero,
+    trim_matrix,
+    pixel2str,
+)
 
 
 def rescale(img, factor):
     return factor[0] + img * factor[1]
 
 
-def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
+def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None, tmp_img_dir=None):
     """生成幻影图片
 
     :param img1: 目标图片1, 在背景1下展示
@@ -26,6 +32,11 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
     # 计算背景颜色差异
     diff_bg = bg1 - bg2
     diff_bg_2 = img_dot(diff_bg, diff_bg)
+    if tmp_img_dir:
+        cv.imwrite(f'{tmp_img_dir}/0-src-1.png', img1 * 255)
+        cv.imwrite(f'{tmp_img_dir}/0-src-2.png', img2 * 255)
+        cv.imwrite(f'{tmp_img_dir}/0-bg-1.png', bg1 * 255)
+        cv.imwrite(f'{tmp_img_dir}/0-bg-2.png', bg2 * 255)
 
     # 根据背景进行颜色调制
     # ==色相调制==
@@ -39,7 +50,9 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
         img1 = bg1 - img1 * diff_bg
         img2 = bg1 - img2 * diff_bg
         default_adjust = 0
-    ced = [img1.copy() * 255, img2.copy() * 255]
+    if tmp_img_dir:
+        cv.imwrite(f'{tmp_img_dir}/1-bg-color-1.png', img1 * 255)
+        cv.imwrite(f'{tmp_img_dir}/1-bg-color-2.png', img2 * 255)
 
     # ==亮度差调制==
     if adjust_ratio is None:
@@ -110,6 +123,10 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
         showinfo("rescale1 = %.4f + img * %.4f:" % factor1, fimg1)
         fimg2 = rescale(img2, factor2)
         showinfo("rescale2 = %.4f + img * %.4f:" % factor2, fimg2)
+        if tmp_img_dir:
+            cv.imwrite(f'{tmp_img_dir}/2-lightness-1.png', fimg1 * 255)
+            cv.imwrite(f'{tmp_img_dir}/2-lightness-2.png', fimg2 * 255)
+
         # 更新图像差异
         diff_img = fimg1 - fimg2
         # 更新透明度
@@ -125,6 +142,8 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
             min_pos,
         )
     )
+    if tmp_img_dir:
+        cv.imwrite(f'{tmp_img_dir}/3-result-alpha.png', alpha * 255)
     # 将透明度矩阵扩展为(h,w,1)
     alpha = np.expand_dims(alpha, -1)
 
@@ -139,45 +158,21 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
 
     # 生成最终的图像
     mixed_image = np.concatenate((result_bgr, alpha), -1)
+    if tmp_img_dir:
+        cv.imwrite(f'{tmp_img_dir}/4-result-bgr.png', result_bgr * 255)
+        cv.imwrite(f'{tmp_img_dir}/5-result.png', mixed_image * 255)
+        cv.imwrite(
+            f'{tmp_img_dir}/6-result-bg1.png',
+            (result_bgr * alpha + bg1 * (1 - alpha)) * 255,
+        )
+        cv.imwrite(
+            f'{tmp_img_dir}/6-result-bg2.png',
+            (result_bgr * alpha + bg2 * (1 - alpha)) * 255,
+        )
     showinfo("mixed_image", mixed_image)
     # TODO: 是否需要 * 255? 是否需要转换为 uint8?
-    return mixed_image * 255, ced
+    return mixed_image * 255
 
 
 def norm_img(img):
     return np.array(img).astype("float") / 255
-
-
-def generate_html(img1, img2, bg1, bg2, name="all", adjust_ratio=None):
-    from utils import get_image_data_url
-    import json
-
-    bg_template = np.ones_like(img1).astype("float")
-    res, (ced1, ced2) = get_mixed(
-        norm_img(img1),
-        norm_img(img2),
-        norm_img(bg1) * bg_template,
-        norm_img(bg2) * bg_template,
-        adjust_ratio,
-    )
-    cv.imwrite("output/%s.png" % name, res)
-
-    item = {
-        "targets": [
-            {"data": get_image_data_url(img1, ".jpg")},
-            {"data": get_image_data_url(img2, ".jpg")},
-            {"data": get_image_data_url(ced1, ".jpg")},
-            {"data": get_image_data_url(ced2, ".jpg")},
-        ],
-        "backgrounds": [
-            {"data": pixel2str(bg1)},
-            {"data": pixel2str(bg2)},
-        ],
-        "result": {"data": "../output/%s.png" % name},
-    }
-    with open("template/all.html", "r", -1, "UTF8") as f:
-        template = f.read()
-    result = template.replace("__JSON_DATA__", json.dumps(item))
-    with open("output/%s.html" % name, "w", -1, "UTF8") as f:
-        f.write(result)
-
