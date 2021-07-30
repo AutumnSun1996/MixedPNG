@@ -263,7 +263,7 @@ def showinfo(*args, **kwargs):
     for arg in args:
         # 处理numpy矩阵
         if isinstance(arg, np.ndarray):
-            arg = "<{}{}: {:.3f} | {:.3f} | {:.3f}>".format(
+            arg = "<{}{}: min={:.3f} | avg={:.3f} | max={:.3f}>".format(
                 arg.shape, arg.dtype, arg.min(), arg.mean(), arg.max()
             )
         pargs.append(arg)

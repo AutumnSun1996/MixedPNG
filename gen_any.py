@@ -33,17 +33,17 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
         print("背景颜色调制 1")
         img1 = img1 * diff_bg + bg2
         img2 = img2 * diff_bg + bg2
-        defaut_adjust = 1
+        default_adjust = 1
     else:
         print("背景颜色调制 -1")
         img1 = bg1 - img1 * diff_bg
         img2 = bg1 - img2 * diff_bg
-        defaut_adjust = 0
+        default_adjust = 0
     ced = [img1.copy() * 255, img2.copy() * 255]
 
     # ==亮度差调制==
     if adjust_ratio is None:
-        adjust_ratio = defaut_adjust
+        adjust_ratio = default_adjust
 
     # 计算目标颜色差异
     diff_img = img1 - img2
@@ -51,7 +51,7 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
     # 先尝试直接计算透明度
     beta = div_no_zero(img_dot(diff_bg, diff_img), diff_bg_2)
     alpha = 1 - beta
-    showinfo("alpha init", alpha)
+    showinfo("init alpha", alpha)
 
     # 获取透明度极值点
     min_pos = np.unravel_index(np.argmin(beta), beta.shape)
@@ -107,9 +107,9 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
 
         # 进行变换
         fimg1 = rescale(img1, factor1)
-        showinfo("rescale 1", factor1, fimg1)
+        showinfo("rescale1 = %.4f + img * %.4f:" % factor1, fimg1)
         fimg2 = rescale(img2, factor2)
-        showinfo("rescale 2", factor2, fimg2)
+        showinfo("rescale2 = %.4f + img * %.4f:" % factor2, fimg2)
         # 更新图像差异
         diff_img = fimg1 - fimg2
         # 更新透明度
@@ -130,12 +130,12 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None):
 
     # 计算bgr通道数值
     result_bgr = bg1 + div_no_zero(fimg1 - bg1, alpha)
-    showinfo("result_bgr", result_bgr)
+    showinfo("result_bgr ", result_bgr)
     # 保证bgr通道取值为0到1之间，溢出部分直接舍去
     # TODO: 是否可以避免溢出? 是否有更好的溢出处理方案?
     # TODO: 饱和度调制?
     result_bgr = trim_matrix(result_bgr, 0, 1, 0, 1)
-    showinfo("result_bgr", result_bgr)
+    showinfo("trimmed_bgr", result_bgr)
 
     # 生成最终的图像
     mixed_image = np.concatenate((result_bgr, alpha), -1)
