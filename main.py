@@ -39,10 +39,14 @@ def get_args():
         default=[color("black"), color("white")],
         type=color,
     )
+    parser.add_argument(
+        "--desaturate", "-ds", type=float, nargs="+", default=[0.5, 0.5]
+    )
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--gray", action="store_true")
     parser.add_argument("--reverse", action="store_true")
     parser.add_argument("--adjust-ratio", "-r", type=float, default=None)
+    parser.add_argument("--trim-thresh", "-tr", type=float, default=1)
     args = parser.parse_args()
     return args
 
@@ -96,7 +100,9 @@ def main():
         norm_img(img2),
         norm_img(bg1) * bg_template,
         norm_img(bg2) * bg_template,
+        args.desaturate,
         args.adjust_ratio,
+        args.trim_thresh,
         tmp_dir,
     )
 

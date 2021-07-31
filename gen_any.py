@@ -6,7 +6,7 @@ from utils import (
     img_dot,
     div_no_zero,
     trim_matrix,
-    pixel2str,
+    desaturate,
 )
 
 
@@ -14,7 +14,16 @@ def rescale(img, factor):
     return factor[0] + img * factor[1]
 
 
-def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None, tmp_img_dir=None):
+def get_mixed(
+    img1,
+    img2,
+    bg1=None,
+    bg2=None,
+    s_max=None,
+    adjust_ratio=None,
+    trim_thresh=1,
+    tmp_img_dir=None,
+):
     """生成幻影图片
 
     :param img1: 目标图片1, 在背景1下展示
@@ -37,24 +46,32 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None, tmp_img_dir=Non
         cv.imwrite(f'{tmp_img_dir}/0-src-2.png', img2 * 255)
         cv.imwrite(f'{tmp_img_dir}/0-bg-1.png', bg1 * 255)
         cv.imwrite(f'{tmp_img_dir}/0-bg-2.png', bg2 * 255)
+    if s_max is None:
+        s_max = [1, 1]
+
+    # ==去饱和==
+    img1 = desaturate(img1, s_max[0])
+    img2 = desaturate(img2, s_max[1])
+    if tmp_img_dir:
+        cv.imwrite(f'{tmp_img_dir}/1-desaturate-1.png', img1 * 255)
+        cv.imwrite(f'{tmp_img_dir}/1-desaturate-2.png', img2 * 255)
 
     # 根据背景进行颜色调制
     # ==色相调制==
     if diff_bg.mean() > 0:
-        print("背景颜色调制 1")
+        # bg1平均亮度更高
         img1 = img1 * diff_bg + bg2
         img2 = img2 * diff_bg + bg2
         default_adjust = 1
     else:
-        print("背景颜色调制 -1")
+        # bg2平均亮度更高
         img1 = bg1 - img1 * diff_bg
         img2 = bg1 - img2 * diff_bg
         default_adjust = 0
     if tmp_img_dir:
-        cv.imwrite(f'{tmp_img_dir}/1-bg-color-1.png', img1 * 255)
-        cv.imwrite(f'{tmp_img_dir}/1-bg-color-2.png', img2 * 255)
-
-    # ==亮度差调制==
+        cv.imwrite(f'{tmp_img_dir}/2-bg-color-1.png', img1 * 255)
+        cv.imwrite(f'{tmp_img_dir}/2-bg-color-2.png', img2 * 255)
+    # ==亮度差调制参数==
     if adjust_ratio is None:
         adjust_ratio = default_adjust
 
@@ -119,16 +136,16 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None, tmp_img_dir=Non
         factor2 = factor1[0] - diff_a, diff_b
 
         # 进行变换
-        fimg1 = rescale(img1, factor1)
-        showinfo("rescale1 = %.4f + img * %.4f:" % factor1, fimg1)
-        fimg2 = rescale(img2, factor2)
-        showinfo("rescale2 = %.4f + img * %.4f:" % factor2, fimg2)
+        img1 = rescale(img1, factor1)
+        showinfo("rescale1 = %.4f + img * %.4f:" % factor1, img1)
+        img2 = rescale(img2, factor2)
+        showinfo("rescale2 = %.4f + img * %.4f:" % factor2, img2)
         if tmp_img_dir:
-            cv.imwrite(f'{tmp_img_dir}/2-lightness-1.png', fimg1 * 255)
-            cv.imwrite(f'{tmp_img_dir}/2-lightness-2.png', fimg2 * 255)
+            cv.imwrite(f'{tmp_img_dir}/2-lightness-1.png', img1 * 255)
+            cv.imwrite(f'{tmp_img_dir}/2-lightness-2.png', img2 * 255)
 
         # 更新图像差异
-        diff_img = fimg1 - fimg2
+        diff_img = img1 - img2
         # 更新透明度
         alpha = 1 - div_no_zero(img_dot(diff_bg, diff_img), diff_bg_2)
 
@@ -143,17 +160,18 @@ def get_mixed(img1, img2, bg1=None, bg2=None, adjust_ratio=None, tmp_img_dir=Non
         )
     )
     if tmp_img_dir:
-        cv.imwrite(f'{tmp_img_dir}/3-result-alpha.png', alpha * 255)
+        cv.imwrite(f'{tmp_img_dir}/4-result-alpha.png', alpha * 255)
     # 将透明度矩阵扩展为(h,w,1)
     alpha = np.expand_dims(alpha, -1)
 
     # 计算bgr通道数值
-    result_bgr = bg1 + div_no_zero(fimg1 - bg1, alpha)
+    result_bgr = bg1 + div_no_zero(img1 - bg1, alpha)
     showinfo("result_bgr ", result_bgr)
     # 保证bgr通道取值为0到1之间，溢出部分直接舍去
     # TODO: 是否可以避免溢出? 是否有更好的溢出处理方案?
     # TODO: 饱和度调制?
-    result_bgr = trim_matrix(result_bgr, 0, 1, 0, 1)
+    trim_thresh = min(result_bgr.max(), 1, trim_thresh)
+    result_bgr = trim_matrix(result_bgr, 0, 1, 0, trim_thresh)
     showinfo("trimmed_bgr", result_bgr)
 
     # 生成最终的图像
