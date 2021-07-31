@@ -24,29 +24,30 @@ python main.py --image a.png b.png --output target --background black white
 
 图1/图2
 
-<img alt="图1" src="sample/gray-step/0-src-1.png" style="width: 40%">
-<img alt="图1" src="sample/gray-step/0-src-2.png" style="width: 40%">
+![](sample/gray-step/0-src-1.png)
+![](sample/gray-step/0-src-2.png)
 
 
 生成的图片在黑色/白色背景下的效果
+(图片链接: [sample/gray.png](sample/gray.png))
 
-<img alt="白色背景" src="sample/gray.png" style="width: 40%; background: black">
-<img alt="黑色背景" src="sample/gray.png" style="width: 40%; background: white">
-
+![](sample/gray-step/6-result-bg1.png)
+![](sample/gray-step/6-result-bg2.png)
 
 
 ## 彩色图示例
 
 图1/图2
 
-<img alt="图1" src="sample/colorful-step/0-src-1.png" style="width: 40%">
-<img alt="图1" src="sample/colorful-step/0-src-2.png" style="width: 40%">
+![](sample/colorful-step/0-src-1.png)
+![](sample/colorful-step/0-src-2.png)
+
 
 
 生成的图片在黑色/白色背景下的效果
-
-<img alt="白色背景" src="sample/colorful.png" style="width: 40%; background: black">
-<img alt="黑色背景" src="sample/colorful.png" style="width: 40%; background: white">
+(图片链接: [sample/colorful.png](sample/colorful.png))
 
 
+![](sample/colorful-step/6-result-bg1.png)
+![](sample/colorful-step/6-result-bg2.png)
 
