@@ -9,10 +9,10 @@ from gen_any import get_mixed, norm_img
 
 
 def image_path(text):
-    img = cv.imread(text)
+    img = cv.imread(text, cv.IMREAD_UNCHANGED)
     if img is None:
         raise ValueError("Invalid image %s" % text)
-    return bgra2bgr(img)
+    return bgra2bgr(norm_img(img))
 
 
 def bgr_to_gray(img):
@@ -40,7 +40,7 @@ def get_args():
         type=color,
     )
     parser.add_argument(
-        "--desaturate", "-ds", type=float, nargs="+", default=[0.5, 0.5]
+        "--desaturate", "-ds", type=float, nargs=2, default=[0.5, 0.5]
     )
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--gray", action="store_true")
@@ -76,7 +76,7 @@ def main():
     args = get_args()
     img1, img2 = align(*args.image)
     bg1, bg2 = args.background
-    bg_template = np.ones_like(img1).astype("float")
+    bg_template = np.ones_like(img1).astype("float32")
 
     if args.reverse:
         img1, img2, bg1, bg2 = img2, img1, bg2, bg1
@@ -96,10 +96,10 @@ def main():
         tmp_dir = None
 
     res = get_mixed(
-        norm_img(img1),
-        norm_img(img2),
-        norm_img(bg1) * bg_template,
-        norm_img(bg2) * bg_template,
+        img1,
+        img2,
+        bg1 * bg_template,
+        bg2 * bg_template,
         args.desaturate,
         args.adjust_ratio,
         args.trim_thresh,

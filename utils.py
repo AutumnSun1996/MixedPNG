@@ -157,15 +157,15 @@ COLOR_NAME_MAP = {
 }
 
 
-def bgra2bgr(img, background=255):
+def bgra2bgr(img, background=1):
     """模拟background颜色的背景, 将bgra格式的图片转换为bgr格式"""
+    img = img.astype("float32")
     if img.shape[2] < 4:
         return img
-    img = img.astype("float32")
     bgr = img[:, :, :3]
     alpha = img[:, :, 3:]
-    result = bgr * (alpha / 255.0) + (255 - alpha) * (background / 255.0)
-    return result.astype("uint8")
+    result = bgr * alpha + (1 - alpha) * background
+    return result
 
 
 def div_no_zero(a, b, out=None):
@@ -271,9 +271,14 @@ def showinfo(*args, **kwargs):
     for arg in args:
         # 处理numpy矩阵
         if isinstance(arg, np.ndarray):
-            arg = "<{}{}: min={:.3f} | avg={:.3f} | max={:.3f}>".format(
-                arg.shape, arg.dtype, arg.min(), arg.mean(), arg.max()
-            )
+            min_pos = np.unravel_index(np.argmin(arg), arg.shape)
+            min_val = arg[min_pos]
+            max_pos = np.unravel_index(np.argmax(arg), arg.shape)
+            max_val = arg[max_pos]
+            min_str = f"{min_val:.3f}@{min_pos}"
+            max_str = f"{max_val:.3f}@{max_pos}"
+            avg_val = arg.mean()
+            arg = f"<{arg.shape}{arg.dtype}: min={min_str} | avg={avg_val:.3f} | max={max_str}>"
         pargs.append(arg)
     print(*pargs, **kwargs)
 
@@ -315,10 +320,12 @@ def load_color(text):
     text = text.lower()
     if text in COLOR_NAME_MAP:
         text = COLOR_NAME_MAP[text]
-    if re.search(r"^#[0-9a-f]{3}$", text):
-        r, g, b = [int(text[i] * 2, 16) for i in (1, 2, 3)]
-    elif re.search(r"^#[0-9a-f]{6}$", text):
-        r, g, b = [int(text[i : i + 2], 16) for i in (1, 3, 5)]
+    if m := re.search(r"^#?([0-9a-f]{3})$", text):
+        text = m.group(1)
+        r, g, b = [int(text[i] * 2, 16) for i in range(3)]
+    elif m := re.search(r"^#?([0-9a-f]{6})$", text):
+        text = m.group(1)
+        r, g, b = [int(text[i : i + 2], 16) / 255 for i in range(0, 6, 2)]
     else:
         raise ValueError("Invalid Color Represent: %r" % text)
     return b, g, r

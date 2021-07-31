@@ -10,8 +10,8 @@ from utils import (
 )
 
 
-def rescale(img, factor):
-    return factor[0] + img * factor[1]
+def rescale(img, a, b):
+    return a + img * b
 
 
 def get_mixed(
@@ -37,7 +37,8 @@ def get_mixed(
         float格式
         [0, 1]区间
     """
-    showinfo("get_mixed", img1, img2, bg1, bg2)
+    showinfo("背景", bg1, bg2)
+    showinfo("输入", img1, img2)
     # 计算背景颜色差异
     diff_bg = bg1 - bg2
     diff_bg_2 = img_dot(diff_bg, diff_bg)
@@ -46,15 +47,15 @@ def get_mixed(
         cv.imwrite(f'{tmp_img_dir}/0-src-2.png', img2 * 255)
         cv.imwrite(f'{tmp_img_dir}/0-bg-1.png', bg1 * 255)
         cv.imwrite(f'{tmp_img_dir}/0-bg-2.png', bg2 * 255)
-    if s_max is None:
-        s_max = [1, 1]
 
     # ==去饱和==
-    img1 = desaturate(img1, s_max[0])
-    img2 = desaturate(img2, s_max[1])
+    if s_max is not None:
+        img1 = desaturate(img1, s_max[0])
+        img2 = desaturate(img2, s_max[1])
     if tmp_img_dir:
         cv.imwrite(f'{tmp_img_dir}/1-desaturate-1.png', img1 * 255)
         cv.imwrite(f'{tmp_img_dir}/1-desaturate-2.png', img2 * 255)
+    showinfo('去饱和', img1, img2)
 
     # 根据背景进行颜色调制
     # ==色相调制==
@@ -71,45 +72,30 @@ def get_mixed(
     if tmp_img_dir:
         cv.imwrite(f'{tmp_img_dir}/2-bg-color-1.png', img1 * 255)
         cv.imwrite(f'{tmp_img_dir}/2-bg-color-2.png', img2 * 255)
+    showinfo('色相调制', img1, img2)
+
     # ==亮度差调制参数==
     if adjust_ratio is None:
-        adjust_ratio = default_adjust
+        adjust_ratio = 0.5
 
     # 计算目标颜色差异
     diff_img = img1 - img2
 
     # 先尝试直接计算透明度
     beta = div_no_zero(img_dot(diff_bg, diff_img), diff_bg_2)
-    alpha = 1 - beta
-    showinfo("init alpha", alpha)
-
     # 获取透明度极值点
     min_pos = np.unravel_index(np.argmin(beta), beta.shape)
     max_pos = np.unravel_index(np.argmax(beta), beta.shape)
-    print(
-        "beta: min=%.3f@%s, max=%.3f@%s"
-        % (beta[min_pos], min_pos, beta[max_pos], max_pos)
-    )
-    print(
-        "init alpha: min=%.3f@%s, max=%.3f@%s"
-        % (
-            alpha[max_pos],
-            max_pos,
-            alpha[min_pos],
-            min_pos,
-        )
-    )
+    showinfo("init beta", beta)
 
     # 当极值满足限制时，无需修改
     if beta[min_pos] >= 0 and beta[max_pos] <= 1:
-        print("No change Required")
-        fimg1 = img1
-        # fimg2 = img2
+        print("无需进行亮度调整")
     else:
         # 计算新的极值
         new_max = min(beta[max_pos], 1)
         new_min = max(beta[min_pos], 0)
-        print("new range", new_min, new_max)
+        print("进行亮度调整", new_min, new_max)
 
         # 取当前极值点数值
         beta_max = beta[max_pos]
@@ -119,6 +105,11 @@ def get_mixed(
         r_min = diff_bg[min_pos].sum() / np.dot(diff_bg[min_pos], diff_bg[min_pos])
 
         # 计算变换参数
+        # diff_b = (r_min * (new_max - 1) - r_max * (new_min - 1)) / (
+        #     beta_max * r_min - beta_min * r_max
+        # )
+        # diff_a = (1 - new_max + diff_b * beta_max) / r_max
+
         diff_b = (new_min * r_max - new_max * r_min) / (
             beta_min * r_max - beta_max * r_min
         )
@@ -132,14 +123,14 @@ def get_mixed(
         print("adjust limit:", min_a1, max_a1, "ratio:", adjust_ratio)
 
         # 得到图像1和2的变换参数
-        factor1 = min_a1 + adjust_ratio * (max_a1 - min_a1), diff_b
-        factor2 = factor1[0] - diff_a, diff_b
+        a1 = min_a1 + adjust_ratio * (max_a1 - min_a1)
+        a2 = a1 - diff_a
 
         # 进行变换
-        img1 = rescale(img1, factor1)
-        showinfo("rescale1 = %.4f + img * %.4f:" % factor1, img1)
-        img2 = rescale(img2, factor2)
-        showinfo("rescale2 = %.4f + img * %.4f:" % factor2, img2)
+        img1 = rescale(img1, a1, diff_b)
+        showinfo("rescale1 = %.4f + img * %.4f:" % (a1, diff_b), img1)
+        img2 = rescale(img2, a2, diff_b)
+        showinfo("rescale2 = %.4f + img * %.4f:" % (a2, diff_b), img2)
         if tmp_img_dir:
             cv.imwrite(f'{tmp_img_dir}/2-lightness-1.png', img1 * 255)
             cv.imwrite(f'{tmp_img_dir}/2-lightness-2.png', img2 * 255)
@@ -147,18 +138,11 @@ def get_mixed(
         # 更新图像差异
         diff_img = img1 - img2
         # 更新透明度
-        alpha = 1 - div_no_zero(img_dot(diff_bg, diff_img), diff_bg_2)
+        beta = div_no_zero(img_dot(diff_bg, diff_img), diff_bg_2)
+        showinfo("new beta", beta)
 
-    showinfo("alpha final", alpha)
-    print(
-        "new alpha: min=%.3f@%s, max=%.3f@%s"
-        % (
-            alpha[max_pos],
-            max_pos,
-            alpha[min_pos],
-            min_pos,
-        )
-    )
+    alpha = 1 - beta
+    showinfo("final alpha", alpha)
     if tmp_img_dir:
         cv.imwrite(f'{tmp_img_dir}/4-result-alpha.png', alpha * 255)
     # 将透明度矩阵扩展为(h,w,1)
