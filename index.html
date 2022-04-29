@@ -62,7 +62,7 @@
             <img class="input" src="sample/colorful-step/0-src-1.png" alt="">
             <canvas></canvas>
             <div>
-                <label>选择图片<input name="image" type="file"></label>
+                <label>选择图片(支持拖拽)<input name="image" type="file"></label>
                 <label>灰度化<input name="gray" type="number" min="0" max="100" value="70">%</label>
             </div>
         </div>
@@ -70,7 +70,7 @@
             <img class="input" src="sample/colorful-step/0-src-2.png" alt="">
             <canvas></canvas>
             <div>
-                <label>选择图片<input name="image" type="file"></label>
+                <label>选择图片(支持拖拽)<input name="image" type="file"></label>
                 <label>灰度化<input name="gray" type="number" min="0" max="100" value="70">%</label>
             </div>
         </div>
@@ -224,7 +224,7 @@
             for (let canvas of $('#preview canvas')) {
                 console.log(canvas);
                 canvas.width = w;
-                canvas.height = w;
+                canvas.height = h;
                 var ctx = canvas.getContext('2d')
                 ctx.clearRect(0, 0, w, h)
                 ctx.putImageData(resData, 0, 0)
