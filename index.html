@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <title>幻影图片制作工具</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+        }
+
+        img,
+        canvas {
+            width: 30%;
+            height: 30%;
+        }
+
+        div#preview {
+            background-color: gray;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        div.viewer {
+            display: inline-block;
+            width: 40%;
+            height: 40%;
+            margin: 1%;
+        }
+
+        div.viewer canvas {
+            width: 90%;
+            height: 90%;
+            padding: 5%;
+        }
+
+        div.viewer.viewer1 {
+            background-color: white;
+        }
+
+        div.viewer.viewer2 {
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body onload="init()">
+    <div class="center">
+        <div id="merge-config">
+            <label>交换背景<input name="reverse" type="checkbox"></label>
+            <label>亮度调整阈值<input name="pixel-split" type="number" value="128"></label>
+            <label>优先黑色背景<input name="optim-bg1" type="checkbox" checked="checked"></label>
+        </div>
+
+        <div id="src1" class="src">
+            <img class="input" src="sample/colorful-step/0-src-1.png" alt="">
+            <canvas></canvas>
+            <div>
+                <label>选择图片<input name="image" type="file"></label>
+                <label>灰度化<input name="gray" type="number" min="0" max="100" value="70">%</label>
+            </div>
+        </div>
+        <div id="src2" class="src">
+            <img class="input" src="sample/colorful-step/0-src-2.png" alt="">
+            <canvas></canvas>
+            <div>
+                <label>选择图片<input name="image" type="file"></label>
+                <label>灰度化<input name="gray" type="number" min="0" max="100" value="70">%</label>
+            </div>
+        </div>
+
+        <span>效果预览和下载(PS: 两边图片相同, 背景不同. 在任一图片上右键复制或下载即可)</span><br>
+        <div id="preview">
+            <div class="viewer viewer1">
+                <canvas></canvas>
+            </div>
+            <div class="viewer viewer2">
+                <canvas></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+        var canvas1 = $('#src1 canvas')[0];
+        var ctx1 = canvas1.getContext('2d');
+        var img1 = $('#src1 img')[0];
+        var canvas2 = $('#src2 canvas')[0];
+        var ctx2 = canvas2.getContext('2d');
+        var img2 = $('#src2 img')[0];
+
+        function updateSrc(idx) {
+            var img, src, ctx, gray;
+            if (idx === 1) {
+                src = canvas1;
+                ctx = ctx1;
+                img = img1;
+                gray = $('#src1 input[name="gray"]').val();
+            } else {
+                src = canvas2;
+                ctx = ctx2;
+                img = img2;
+                gray = $('#src2 input[name="gray"]').val();
+            }
+            // 始终使用img1的大小
+            var w = src.width = img1.naturalWidth, h = src.height = img1.naturalHeight;
+            var ctx = src.getContext('2d');
+
+            ctx.clearRect(0, 0, w, h)
+            if ($('#merge-config input[name="reverse"]')[0].checked) {
+                console.log('reverse');
+                idx = 2 - idx;
+            }
+            if (idx == 1) {
+                ctx.fillStyle = "black"
+            } else {
+                ctx.fillStyle = "white"
+            }
+            ctx.fillRect(0, 0, w, h)
+            ctx.filter = "grayscale(" + gray + "%)"
+            ctx.drawImage(img, 0, 0, w, h)
+        }
+
+        function showinfo() {
+            let args = arguments;
+            for (let arg of args) {
+
+            }
+        }
+        function trimPixel(data, newLower, newUpper) {
+            var size = data.length;
+            var lower = data[0], upper = data[0];
+            for (let offset = 0; offset < size; offset += 4) {
+                for (let i = 0; i < 3; ++i) {
+                    var c = data[offset + i]
+                    if (lower > c) {
+                        lower = c;
+                    }
+                    if (upper < c) {
+                        upper = c;
+                    }
+                }
+            }
+            var ratio;
+            if (upper === lower) {
+                ratio = 0;
+            } else {
+                ratio = (newUpper - newLower) / (upper - lower);
+            }
+            for (let offset = 0; offset < size; offset += 4) {
+                for (let i = 0; i < 3; ++i) {
+                    var c = data[offset + i]
+                    data[offset + i] = newLower + ratio * (c - lower)
+                }
+            }
+        }
+
+        function mixPixel(offset, data1, data2, data, optimbg1) {
+            let a = 0;
+            for (let i = 0; i < 3; ++i) {
+                a += 255 + data1[offset + i] - data2[offset + i]
+            }
+            a = a / 3;
+            // 设置alpha通道
+            data[offset + 3] = a;
+            if (a === 0) {
+                // alpha=0, 跳过RGB通道
+                return
+            }
+            // result_bgr = div_no_zero(desaturated_b, alpha) * 255.0
+            if (optimbg1) {
+                for (let i = 0; i < 3; ++i) {
+                    var c = 255 * data1[offset + i] / a;
+                    data[offset + i] = c;
+                }
+            } else {
+                for (let i = 0; i < 3; ++i) {
+                    var c = 255 * (data2[offset + i] - 255) / a + 255;
+                    data[offset + i] = c;
+                }
+            }
+        }
+
+        function copyPixel(offset, data1, data2, data) {
+            for (let i = 0; i < 4; ++i) {
+                data[offset + i] = data2[offset + i]
+            }
+        }
+
+        async function generate() {
+            console.log('generate start')
+            updateSrc(1);
+            updateSrc(2);
+            var w = img1.naturalWidth, h = img1.naturalHeight;
+            var data1 = ctx1.getImageData(0, 0, w, h);
+            var data2 = ctx2.getImageData(0, 0, w, h);
+            var reverse = $('#merge-config input[name="reverse"]')[0].checked;
+            var optimbg1 = $('#merge-config input[name="optim-bg1"]')[0].checked;
+            if (reverse) {
+                var tmp = data1;
+                data1 = data2;
+                data2 = tmp;
+            }
+            var splitVal = parseInt($('input[name="pixel-split"]').val());
+            console.log('splitVal', splitVal);
+
+            trimPixel(data1.data, 0, splitVal);
+            trimPixel(data2.data, splitVal, 255);
+            var resData = new ImageData(w, h)
+            resData.data.fill(0);
+            // showinfo("alpha", alpha)
+            for (let x = 0; x < w; ++x) {
+                for (let y = 0; y < h; ++y) {
+                    var offset = y * w * 4 + x * 4;
+                    // result_bgr = div_no_zero(desaturated_b, alpha) * 255.0
+                    mixPixel(offset, data1.data, data2.data, resData.data, optimbg1);
+                }
+            }
+            console.log('resData', resData)
+            for (let canvas of $('#preview canvas')) {
+                console.log(canvas);
+                canvas.width = w;
+                canvas.height = w;
+                var ctx = canvas.getContext('2d')
+                ctx.clearRect(0, 0, w, h)
+                ctx.putImageData(resData, 0, 0)
+            }
+            console.log('generate done')
+        }
+
+        function loadImageFile(target, file) {
+            const reader = new FileReader();
+            console.log('Load Image', target, file);
+            reader.onload = function (evt) {
+                console.log('load to', target);
+                $(target).attr('src', evt.target.result);
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function init() {
+            $('input[name="image"]').on('change', function (evt) {
+                let target = $(evt.target).parents('div.src').children('img');
+                loadImageFile(target, evt.target.files[0]);
+            });
+            $("div.src").on('dragover', false).on('drop', function (evt) {
+                event.preventDefault();
+                // event.stopPropagation();
+                var files = evt.originalEvent.dataTransfer.files;
+                if (files.length > 0) {
+                    let target = $(evt.target).parents('div.src').children('img');
+                    loadImageFile(target, files[0]);
+                }
+            })
+            $('input').on('change', generate)
+            $('img').on('load', generate)
+            generate()
+        }
+    </script>
+</body>
+
+</html>
