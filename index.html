@@ -224,7 +224,7 @@
             for (let canvas of $('#preview canvas')) {
                 console.log(canvas);
                 canvas.width = w;
-                canvas.height = w;
+                canvas.height = h;
                 var ctx = canvas.getContext('2d')
                 ctx.clearRect(0, 0, w, h)
                 ctx.putImageData(resData, 0, 0)
