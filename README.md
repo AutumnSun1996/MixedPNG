@@ -4,6 +4,8 @@
 
 将两张图片合成为一张新的带有透明通道的新图片, 令新图片在指定的两种背景下的显示效果分别接近两张输入图片.
 
+HTML Demo: [gh-pages](https://autumnsun1996.github.io/MixedPNG/)
+
 使用方式:
 ```bash
 python main.py --image img1 img2 --output OUTPUT [--background black white] [--verbose] [--gray] [--reverse] [--adjust-ratio ADJUST_RATIO]
